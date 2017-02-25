@@ -1,0 +1,92 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 1
+; Bound: 52
+; Schema: 0
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %4 "main" %39 %42 %44
+               OpExecutionMode %4 OriginUpperLeft
+               OpSource GLSL 450
+               OpSourceExtension "GL_ARB_separate_shader_objects"
+               OpSourceExtension "GL_ARB_shading_language_420pack"
+               OpSourceExtension "SPV_AMD_shader_explicit_vertex_parameter"
+               OpName %4 "main"
+               OpName %14 "calculate_output_VBID(b1;u1;u1;"
+               OpName %11 "opaque"
+               OpName %12 "draw_id"
+               OpName %13 "primitive_id"
+               OpName %16 "drawID_primID"
+               OpName %39 "id"
+               OpName %42 "draw_id"
+               OpName %44 "gl_PrimitiveID"
+               OpName %47 "param"
+               OpName %48 "param"
+               OpName %50 "param"
+               OpDecorate %39 Location 0
+               OpDecorate %42 Flat
+               OpDecorate %42 Location 0
+               OpDecorate %44 Flat
+               OpDecorate %44 BuiltIn PrimitiveId
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+          %6 = OpTypeBool
+          %7 = OpTypePointer Function %6
+          %8 = OpTypeInt 32 0
+          %9 = OpTypePointer Function %8
+         %10 = OpTypeFunction %8 %7 %9 %9
+         %18 = OpTypeInt 32 1
+         %19 = OpConstant %18 23
+         %21 = OpConstant %8 2139095040
+         %24 = OpConstant %8 8388607
+         %33 = OpConstant %8 2147483648
+         %38 = OpTypePointer Output %8
+         %39 = OpVariable %38 Output
+         %40 = OpConstantTrue %6
+         %41 = OpTypePointer Input %8
+         %42 = OpVariable %41 Input
+         %43 = OpTypePointer Input %18
+         %44 = OpVariable %43 Input
+          %4 = OpFunction %2 None %3
+          %5 = OpLabel
+         %47 = OpVariable %7 Function
+         %48 = OpVariable %9 Function
+         %50 = OpVariable %9 Function
+         %45 = OpLoad %18 %44
+         %46 = OpBitcast %8 %45
+               OpStore %47 %40
+         %49 = OpLoad %8 %42
+               OpStore %48 %49
+               OpStore %50 %46
+         %51 = OpFunctionCall %8 %14 %47 %48 %50
+               OpStore %39 %51
+               OpReturn
+               OpFunctionEnd
+         %14 = OpFunction %8 None %10
+         %11 = OpFunctionParameter %7
+         %12 = OpFunctionParameter %9
+         %13 = OpFunctionParameter %9
+         %15 = OpLabel
+         %16 = OpVariable %9 Function
+         %17 = OpLoad %8 %12
+         %20 = OpShiftLeftLogical %8 %17 %19
+         %22 = OpBitwiseAnd %8 %20 %21
+         %23 = OpLoad %8 %13
+         %25 = OpBitwiseAnd %8 %23 %24
+         %26 = OpBitwiseOr %8 %22 %25
+               OpStore %16 %26
+         %27 = OpLoad %6 %11
+               OpSelectionMerge %29 None
+               OpBranchConditional %27 %28 %32
+         %28 = OpLabel
+         %30 = OpLoad %8 %16
+               OpReturnValue %30
+         %32 = OpLabel
+         %34 = OpLoad %8 %16
+         %35 = OpBitwiseOr %8 %33 %34
+               OpReturnValue %35
+         %29 = OpLabel
+         %37 = OpUndef %8
+               OpReturnValue %37
+               OpFunctionEnd

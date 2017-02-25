@@ -1,0 +1,10 @@
+file(GLOB VKS_SHADERS
+  ${CMAKE_SOURCE_DIR}/shaders/*.vert
+  ${CMAKE_SOURCE_DIR}/shaders/*.frag
+)
+
+foreach(file ${VKS_SHADERS})
+  execute_process(
+    #COMMAND ${CMAKE_SOURCE_DIR}/compile_shader.sh ${file}
+    COMMAND glslangValidator -V -o "${file}.spv" "${file}")
+endforeach(file)

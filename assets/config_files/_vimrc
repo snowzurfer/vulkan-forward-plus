@@ -1,0 +1,87 @@
+version 6.0
+if &cp | set nocp | endif
+let s:cpo_save=&cpo
+set cpo&vim
+cnoremap <C-F4> c
+inoremap <C-F4> c
+cnoremap <C-Tab> w
+inoremap <C-Tab> w
+cmap <S-Insert> +
+imap <S-Insert> 
+xnoremap  ggVG
+snoremap  gggHG
+onoremap  gggHG
+nnoremap  gggHG
+vnoremap  "+y
+noremap  
+vnoremap  :update
+nnoremap  :update
+onoremap  :update
+nmap  "+gP
+omap  "+gP
+vnoremap  "+x
+noremap  
+noremap  u
+cnoremap   :simalt ~
+inoremap   :simalt ~
+map Q gq
+vmap [% [%m'gv``
+vmap ]% ]%m'gv``
+vmap a% [%v]%
+vmap gx <Plug>NetrwBrowseXVis
+nmap gx <Plug>NetrwBrowseX
+vnoremap <silent> <Plug>NetrwBrowseXVis :call netrw#BrowseXVis()
+nnoremap <silent> <Plug>NetrwBrowseX :call netrw#BrowseX(expand((exists("g:netrw_gx")? g:netrw_gx : '<cfile>')),netrw#CheckIfRemote())
+onoremap <C-F4> c
+nnoremap <C-F4> c
+vnoremap <C-F4> c
+onoremap <C-Tab> w
+nnoremap <C-Tab> w
+vnoremap <C-Tab> w
+vmap <S-Insert> 
+vnoremap <BS> d
+vmap <C-Del> "*d
+vnoremap <S-Del> "+x
+vnoremap <C-Insert> "+y
+nmap <S-Insert> "+gP
+omap <S-Insert> "+gP
+cnoremap  gggHG
+inoremap  gggHG
+inoremap  :update
+inoremap  u
+cmap  +
+inoremap  
+inoremap  u
+noremap   :simalt ~
+imap jk 
+let &cpo=s:cpo_save
+unlet s:cpo_save
+set backspace=indent,eol,start
+set backup
+set diffexpr=MyDiff()
+set display=truncate
+set expandtab
+set guioptions=egmrLT
+set helplang=en
+set history=200
+set hlsearch
+set incsearch
+set keymodel=startsel,stopsel
+set langnoremap
+set nolangremap
+set nrformats=bin,hex
+set ruler
+set runtimepath=~/vimfiles,C:\\Program\ Files\ (x86)\\Vim/vimfiles,C:\\Program\ Files\ (x86)\\Vim\\vim80,C:\\Program\ Files\ (x86)\\Vim\\vim80\\pack\\dist\\opt\\matchit,C:\\Program\ Files\ (x86)\\Vim/vimfiles/after,~/vimfiles/after
+set scrolloff=5
+set selection=exclusive
+set selectmode=mouse,key
+set shiftwidth=2
+set softtabstop=2
+set noswapfile
+set ttimeout
+set ttimeoutlen=100
+set undofile
+set whichwrap=b,s,<,>,[,]
+set wildmenu
+set window=61
+" vim: set ft=vim :

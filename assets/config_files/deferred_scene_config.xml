@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+  <scene>
+    <name>Deferred Scene</name>
+    <viewport>
+      <x>0</x>
+      <y>0</y>
+      <width>800</widht>
+      <height>600</height>
+    </viewport>
+    <lights>
+
+    </lights>
+    <vtx_layout>
+      <element>position</element>
+      <element>normal</element>
+      <element>uv</element>
+      <element>bitangent</element>
+      <element>tangent</element>
+    </vtx_layout>
+    <models>
+      <model>
+        <path>nanosuit/nanosuit.obj</path>
+        <mat_path>nanosuit/</mat_path>
+        <post_processes>
+          <element>triangulate</element>
+          <element>gen_smooth_normals</element>
+          <element>calc_tangent_space</element>
+        </post_processes>
+
+    </models>
+  </scene>
+</config>
+
