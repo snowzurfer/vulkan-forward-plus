@@ -17,8 +17,6 @@ namespace vks {
 
 class VulkanDevice;
 
-extern const eastl::string kBaseShaderAssetsPath;
-
 enum class ShaderTypes : uint8_t {
   VERTEX = 0U,
   TESSELLATION_CONTROL,
@@ -83,6 +81,10 @@ class MaterialBuilder {
       VkFrontFace front_face,
       uint32_t subpass_idx,
       const szt::Viewport &viewport);
+  MaterialBuilder(
+      const eastl::string mat_name,
+      VkPipelineLayout pipe_layout,
+      const szt::Viewport &viewport);
 
   void GetVertexInputBindingDescription(
       eastl::vector<VkVertexInputBindingDescription> &bindings) const;
@@ -113,6 +115,7 @@ class MaterialBuilder {
 
   void SetDepthWriteEnable(VkBool32 enable);
   void SetDepthTestEnable(VkBool32 enable);
+  void SetDepthTest(VkCompareOp op);
   VkBool32 depth_test_enable() const { return depth_test_enable_; }
   VkBool32 depth_write_enable() const { return depth_write_enable_; }
   VkPipelineLayout pipe_layout() const { return pipe_layout_; }
@@ -123,6 +126,8 @@ class MaterialBuilder {
     return color_blend_state_create_info_;
   }
   const szt::Viewport &viewport() const { return viewport_; }
+  bool is_compute() const { return is_compute_; }
+  VkCompareOp depth_compare_op() const { return depth_compare_op_; }
 
  private:
   eastl::vector<eastl::unique_ptr<MaterialShader>> shaders_;
@@ -139,6 +144,8 @@ class MaterialBuilder {
   const szt::Viewport viewport_;
   eastl::vector<VkPipelineColorBlendAttachmentState> color_blend_attachments_;
   eastl::array<float, 4U> blend_constants_;
+  bool is_compute_;
+  VkCompareOp depth_compare_op_;
 
 }; // class MaterialBuilder 
 
@@ -169,6 +176,9 @@ class Material {
   void CreatePipeline(
       const VulkanDevice &device,
       eastl::vector<VkPipelineShaderStageCreateInfo> &stage_create_infos);
+  void CreateComputePipeline(
+      const VulkanDevice &device,
+      const VkPipelineShaderStageCreateInfo &stage_create_infos);
 
   eastl::string name_;
   // The pipeline as defined by the shaders of this material

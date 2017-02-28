@@ -12,7 +12,6 @@
 #include <algorithm>
 #include <EASTL/vector.h>
 #include <glm/gtc/type_ptr.hpp>
-#include <deferred_renderer.h>
 
 namespace vks {
 
@@ -223,43 +222,6 @@ void Model::CreateBuffers(const VulkanDevice &device,
       SCAST_U32(material_ids.size()) *
         SCAST_U32(sizeof(uint32_t)));
   materialIDs_buff_.Unmap(vulkan()->device());
-  
-  // Setup indirect draw buffers
-  init_info.size = SCAST_U32(sizeof(VkDrawIndexedIndirectCommand)) *
-    meshes_count;
-  VKS_ASSERT(init_info.size > 0U, "Size of init_info is zero!");
-  init_info.memory_property_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-    /*VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |*/ VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-  init_info.buffer_usage_flags = VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT |
-    VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-
-  indirect_draws_buff_.Init(device, init_info); 
- 
-  // Upload data to it
-  m_itor = meshes_.begin();
-  eastl::vector<VkDrawIndexedIndirectCommand> indirect_draw_cmds(meshes_count);
-  for (eastl::vector<VkDrawIndexedIndirectCommand>::iterator itor = 
-         indirect_draw_cmds.begin();
-       itor != indirect_draw_cmds.end();
-       ++itor, ++m_itor) {
-    LOG("idx count: " << m_itor->index_count());
-    itor->indexCount = m_itor->index_count(); 
-    itor->instanceCount = 1U;
-    LOG("start count: " << m_itor->start_index());
-    itor->firstIndex = m_itor->start_index();
-    itor->vertexOffset = m_itor->vertex_offset();
-    itor->firstInstance = 0U;
-  }
-  indirect_draws_buff_.Map(
-      vulkan()->device(),
-      &mapped_memory, 
-      SCAST_U32(indirect_draw_cmds.size()) *
-        SCAST_U32(sizeof(VkDrawIndexedIndirectCommand)));
-  uint32_t sizedrawinx = sizeof(VkDrawIndexedIndirectCommand);
-  memcpy(mapped_memory, SCAST_CVOIDPTR(indirect_draw_cmds.data()),
-     SCAST_U32(indirect_draw_cmds.size()) *
-      SCAST_U32(sizeof(VkDrawIndexedIndirectCommand)));
-  indirect_draws_buff_.Unmap(vulkan()->device());
 }
 
 void Model::Shutdown(const VulkanDevice &device) {
@@ -320,39 +282,39 @@ void Model::WriteDescriptorSet(const VulkanDevice &device) {
   eastl::vector<VkWriteDescriptorSet> write_desc_sets;
 
   uint32_t counter = 0U;
-  eastl::vector<VkDescriptorBufferInfo> elems_buff_infos(
-      vertex_buffers_.size());
-  
-  for (eastl::vector<VulkanBuffer>::iterator itor = vertex_buffers_.begin();
-       itor != vertex_buffers_.end();
-       ++itor, ++counter) {
-    elems_buff_infos[counter] =
-      itor->GetDescriptorBufferInfo();
-    uint32_t pos = kVertexBuffersBaseBindPos +
-      vtx_setup_->GetElementPosition(counter);
-    write_desc_sets.push_back(tools::inits::WriteDescriptorSet(
-        desc_set_,
-        pos,
-        0U,
-        1U,
-        VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-        nullptr,
-        &elems_buff_infos[counter],
-        nullptr));
-  }
+  //eastl::vector<VkDescriptorBufferInfo> elems_buff_infos(
+  //    vertex_buffers_.size());
+  //
+  //for (eastl::vector<VulkanBuffer>::iterator itor = vertex_buffers_.begin();
+  //     itor != vertex_buffers_.end();
+  //     ++itor, ++counter) {
+  //  elems_buff_infos[counter] =
+  //    itor->GetDescriptorBufferInfo();
+  //  uint32_t pos = kVertexBuffersBaseBindPos +
+  //    vtx_setup_->GetElementPosition(counter);
+  //  write_desc_sets.push_back(tools::inits::WriteDescriptorSet(
+  //      desc_set_,
+  //      pos,
+  //      0U,
+  //      1U,
+  //      VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+  //      nullptr,
+  //      &elems_buff_infos[counter],
+  //      nullptr));
+  //}
 
-  VkDescriptorBufferInfo idx_buff_info =
-    index_buffer_.GetDescriptorBufferInfo();
-  write_desc_sets.push_back(tools::inits::WriteDescriptorSet(
-      desc_set_,
-      kIdxBufferBindPos,
-      0U,
-      1U,
-      VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-      nullptr,
-      &idx_buff_info,
-      nullptr));
-  
+  //VkDescriptorBufferInfo idx_buff_info =
+  //  index_buffer_.GetDescriptorBufferInfo();
+  //write_desc_sets.push_back(tools::inits::WriteDescriptorSet(
+  //    desc_set_,
+  //    kIdxBufferBindPos,
+  //    0U,
+  //    1U,
+  //    VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+  //    nullptr,
+  //    &idx_buff_info,
+  //    nullptr));
+
   VkDescriptorBufferInfo model_matxs_buff_info =
     model_matxs_buff_.GetDescriptorBufferInfo();
   write_desc_sets.push_back(tools::inits::WriteDescriptorSet(
@@ -364,7 +326,7 @@ void Model::WriteDescriptorSet(const VulkanDevice &device) {
       nullptr,
       &model_matxs_buff_info,
       nullptr));
-  
+
   VkDescriptorBufferInfo materialIDs_buff_info = 
     materialIDs_buff_.GetDescriptorBufferInfo();
   write_desc_sets.push_back(tools::inits::WriteDescriptorSet(
@@ -375,18 +337,6 @@ void Model::WriteDescriptorSet(const VulkanDevice &device) {
       VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
       nullptr,
       &materialIDs_buff_info,
-      nullptr));
-
-  VkDescriptorBufferInfo desc_indirect_draw_buff_info =
-    indirect_draws_buff_.GetDescriptorBufferInfo();
-  write_desc_sets.push_back(tools::inits::WriteDescriptorSet(
-      desc_set_,
-      kIndirectDrawCmdsBindingPos,
-      0U,
-      1U,
-      VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-      nullptr,
-      &desc_indirect_draw_buff_info,
       nullptr));
 
   vkUpdateDescriptorSets(

@@ -8,8 +8,6 @@
 
 namespace vks {
 
-const eastl::string kBaseShaderAssetsPath = "../assets/shaders/";
-
 MaterialShader::MaterialShader(
     const eastl::string &file_name,
     const eastl::string &entry_point,
@@ -148,6 +146,10 @@ const VkShaderStageFlagBits MaterialShader::GetVkShaderType() const {
       return VK_SHADER_STAGE_FRAGMENT_BIT;
       break;
     }
+    case ShaderTypes::COMPUTE: {
+      return VK_SHADER_STAGE_COMPUTE_BIT;
+      break;
+    }
     default:{
       EXIT("This shader type is not supported!");
     }
@@ -162,6 +164,10 @@ const shaderc_shader_kind MaterialShader::GetShadercShaderKind() const {
     }
     case ShaderTypes::FRAGMENT: {
       return shaderc_glsl_fragment_shader;
+      break;
+    }
+    case ShaderTypes::COMPUTE: {
+      return shaderc_glsl_compute_shader;
       break;
     }
     default:{
@@ -220,11 +226,41 @@ MaterialBuilder::MaterialBuilder(
       front_face_(front_face),
       render_pass_(render_pass),
       subpass_idx_(subpass_idx),
-      color_blend_state_create_info_(),
+      color_blend_state_create_info_(
+        tools::inits::PipelineColorBlendStateCreateInfo(
+          VK_FALSE,
+          VK_LOGIC_OP_MAX_ENUM,
+          0U,
+          nullptr,
+          nullptr)
+        ),
       vertex_setup_(),
-      viewport_(viewport) {
+      viewport_(viewport),
+      is_compute_(false),
+      depth_compare_op_(VK_COMPARE_OP_LESS_OR_EQUAL) {
   vertex_setup_ = eastl::make_unique<VertexSetup>(vertex_setup);
 }
+
+MaterialBuilder::MaterialBuilder(
+    const eastl::string mat_name,
+    VkPipelineLayout pipe_layout,
+    const szt::Viewport &viewport)
+    : shaders_(),
+      mat_name_(mat_name),
+      vertex_size_(0U),
+      depth_test_enable_(VK_FALSE),
+      depth_write_enable_(VK_FALSE),
+      pipe_layout_(pipe_layout),
+      front_face_(VK_FRONT_FACE_MAX_ENUM),
+      render_pass_(VK_NULL_HANDLE),
+      subpass_idx_(0U),
+      color_blend_state_create_info_(),
+      vertex_setup_(),
+      viewport_(viewport),
+      is_compute_(true),
+      depth_compare_op_(VK_COMPARE_OP_LESS_OR_EQUAL) {
+}
+
 
 void MaterialBuilder::GetVertexInputBindingDescription(
     eastl::vector<VkVertexInputBindingDescription> &bindings) const {
@@ -299,6 +335,10 @@ void MaterialBuilder::GetVertexInputAttributeDescriptors(
 }
 
 void MaterialBuilder::AddShader(eastl::unique_ptr<MaterialShader> shader) {
+  if(shader->type() == ShaderTypes::COMPUTE) {
+      is_compute_ = true;
+  }
+
   shaders_.push_back(eastl::move(shader));
 }
 
@@ -396,7 +436,7 @@ void Material::CreatePipeline(
   depth_stenc_state_create_info.depthTestEnable = builder_->depth_test_enable();
   depth_stenc_state_create_info.depthWriteEnable =
     builder_->depth_write_enable();
-  depth_stenc_state_create_info.depthCompareOp = VK_COMPARE_OP_LESS;
+  depth_stenc_state_create_info.depthCompareOp = builder_->depth_compare_op();
   depth_stenc_state_create_info.depthBoundsTestEnable = VK_FALSE;
   depth_stenc_state_create_info.stencilTestEnable = VK_FALSE;
   VkStencilOpState stencil_op_state;
@@ -439,6 +479,25 @@ void Material::CreatePipeline(
       &pipeline_));
 }
 
+void Material::CreateComputePipeline(
+    const VulkanDevice &device,
+    const VkPipelineShaderStageCreateInfo &stage_create_infos) {
+  VkComputePipelineCreateInfo pipe_create_info =
+    tools::inits::ComputePipelineCreateInfo();
+  pipe_create_info.stage = stage_create_infos;
+  pipe_create_info.layout = builder_->pipe_layout();
+  pipe_create_info.basePipelineHandle = VK_NULL_HANDLE;
+  pipe_create_info.basePipelineIndex = 0U;
+
+  VK_CHECK_RESULT(vkCreateComputePipelines(
+      device.device(),
+      VK_NULL_HANDLE,
+      1U,
+      &pipe_create_info,
+      nullptr,
+      &pipeline_));
+}
+
 void Material::InitPipeline(
     const VulkanDevice &device,
     eastl::unique_ptr<MaterialBuilder> builder) {
@@ -447,7 +506,14 @@ void Material::InitPipeline(
   eastl::vector<VkPipelineShaderStageCreateInfo> module_create_builders;
   CompileShaders(device, module_create_builders);
 
-  CreatePipeline(device, module_create_builders);
+  if (builder_->is_compute()) {
+    // A compute pipeline uses only one module; hence it necessarily will be
+    // at the first position
+    CreateComputePipeline(device, module_create_builders[0U]);
+  }
+  else {
+    CreatePipeline(device, module_create_builders);
+  }
 
   LOG("Initialised pipe of Mat " + name_ + ".");
 }
@@ -458,7 +524,14 @@ void Material::Reload(const VulkanDevice &device) {
   eastl::vector<VkPipelineShaderStageCreateInfo> module_create_builders;
   CompileShaders(device, module_create_builders);
 
-  CreatePipeline(device, module_create_builders);
+  if (builder_->is_compute()) {
+    // A compute pipeline uses only one module; hence it necessarily will be
+    // at the first position
+    CreateComputePipeline(device, module_create_builders[0U]);
+  }
+  else {
+    CreatePipeline(device, module_create_builders);
+  }
 
   LOG("Reloaded pipe and shaders of Mat " + name_ + ".");
 }
@@ -470,6 +543,10 @@ void MaterialBuilder::SetDepthTestEnable(VkBool32 enable) {
 
 void MaterialBuilder::SetDepthWriteEnable(VkBool32 enable) {
   depth_write_enable_ = enable;
+}
+
+void MaterialBuilder::SetDepthTest(VkCompareOp op) {
+  depth_compare_op_ = op;
 }
 
 void Material::ShutdownPipeline(const VulkanDevice &device) {

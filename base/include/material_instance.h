@@ -28,10 +28,7 @@ class MaterialInstanceBuilder {
  public:
   MaterialInstanceBuilder(
       const eastl::string &inst_name,
-      const eastl::string &mat_name,
       const eastl::string &mats_directory,
-      const VkDescriptorPool desc_pool,
-      const VkDescriptorSetLayout desc_set_layout,
       const VkSampler aniso_sampler);
 
   void AddTexture(const MaterialBuilderTexture &texture_info);
@@ -42,26 +39,16 @@ class MaterialInstanceBuilder {
     return textures_;
   }
   
-  const eastl::string &mat_name() const { return mat_name_; }
   const eastl::string &mats_directory() const { return mats_directory_; }
   const eastl::string &inst_name() const { return inst_name_; }
-  const VkDescriptorPool desc_pool_textures() const {
-    return desc_pool_textures_;
-  }
-  const VkDescriptorSetLayout desc_set_layout() const {
-    return desc_set_layout_;
-  }
 
   VkSampler aniso_sampler() const { return aniso_sampler_; };
 
  private:
   eastl::string inst_name_;
-  eastl::string mat_name_;
   eastl::string mats_directory_;
   eastl::vector<MaterialConstants> consts_;
   eastl::vector<MaterialBuilderTexture> textures_;
-  VkDescriptorPool desc_pool_textures_;
-  VkDescriptorSetLayout desc_set_layout_;
   VkSampler aniso_sampler_;
 
 }; // class MaterialInstanceBuilder

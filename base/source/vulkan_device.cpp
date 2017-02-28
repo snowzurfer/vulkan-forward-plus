@@ -10,7 +10,6 @@
 #include <logger.hpp>
 
 static const std::vector<const char*> kDeviceExtensions = {
-  "VK_AMD_shader_explicit_vertex_parameter",
   VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
 

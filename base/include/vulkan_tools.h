@@ -14,6 +14,9 @@ class VulkanDevice;
 
 namespace tools {
 
+#define STR_EXPAND(str) #str
+#define STR(str) STR_EXPAND(str)
+
 #define SCAST_U32(val) static_cast<uint32_t>(val)
 #define SCAST_U32PTR(val) static_cast<uint32_t *>(val)
 #define SCAST_CU32PTR(val) static_cast<const uint32_t *>(val)
@@ -262,6 +265,14 @@ VkImageMemoryBarrier ImageMemoryBarrier(
 	uint32_t                   dstQueueFamilyIndex,
 	VkImage                    image,
 	VkImageSubresourceRange    subresourceRange);
+VkBufferMemoryBarrier BufferMemoryBarrier(
+  VkAccessFlags      srcAccessMask,
+  VkAccessFlags      dstAccessMask,
+  uint32_t           srcQueueFamilyIndex,
+  uint32_t           dstQueueFamilyIndex,
+  VkBuffer           buffer,
+  VkDeviceSize       offset,
+  VkDeviceSize       size);
 VkRenderPassBeginInfo RenderPassBeginInfo();
 VkPipelineInputAssemblyStateCreateInfo PipelineInputAssemblyStateCreateInfo();
 VkPipelineViewportStateCreateInfo PipelineViewportStateCreateInfo();

@@ -45,4 +45,13 @@ VkDescriptorImageInfo VulkanTexture::GetDescriptorImageInfo() const {
   return info; 
 }
 
+VkDescriptorImageInfo VulkanTexture::GetDescriptorImageInfo(const VkSampler sampler) const {
+  VkDescriptorImageInfo info;
+  info.imageView = image_->view();
+  info.sampler = sampler;
+  info.imageLayout = image_->layout();
+
+  return info; 
+}
+
 } // namespace vks

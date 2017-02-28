@@ -171,10 +171,7 @@ void MeshesHeapManager::LoadOtherModel(
 
     MaterialInstanceBuilder mat_builder(
         mat_name.C_Str(),
-        shade_material_name_,
         material_dir,
-        VK_NULL_HANDLE,
-        VK_NULL_HANDLE,
         aniso_sampler_);
 
     MaterialConstants mat_consts;

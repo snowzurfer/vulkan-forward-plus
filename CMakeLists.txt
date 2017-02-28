@@ -1,4 +1,24 @@
-# Auth: Alberto Taiuti
+#  MIT License
+
+#  Copyright (c) 2017 Alberto Taiuti
+
+#  Permission is hereby granted, free of charge, to any person obtaining a copy
+#  of this software and associated documentation files (the "Software"), to deal
+#  in the Software without restriction, including without limitation the rights
+#  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#  copies of the Software, and to permit persons to whom the Software is
+#  furnished to do so, subject to the following conditions:
+
+#  The above copyright notice and this permission notice shall be included in all
+#  copies or substantial portions of the Software.
+
+#  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#  SOFTWARE.
 
 cmake_minimum_required(VERSION 2.8)
 
@@ -23,14 +43,6 @@ if(NOT CMAKE_BUILD_TYPE)
 MinSizeRel. Default is Debug."
       FORCE)
 endif(NOT CMAKE_BUILD_TYPE)
-
-#if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR
-   #CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-  #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 ")
-  #set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall")
-  #set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -Wall")
-#endif()
-
 
 if(MSVC)
   # Force to always compile with W4
@@ -77,8 +89,7 @@ set(EAAssert_SOURCE_DIR
   "${CMAKE_CURRENT_SOURCE_DIR}/external/eastl/test/packages/EAAssert")
 set(SHADERC_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/shaderc")
 set(VKS_BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/base")
-set(VKS_DEFERRED_DIR "${CMAKE_CURRENT_SOURCE_DIR}/deferred")
-set(VKS_VISBUFF_DIR "${CMAKE_CURRENT_SOURCE_DIR}/visbuff")
+set(VKS_FPLUS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/fplus")
 
 # Build EASTL
 #set(EASTL_BUILD_TESTS ON CACHE BOOL ON)
@@ -123,8 +134,7 @@ include_directories(${GLFW_SOURCE_DIR}/include
                     ${GLM_SOURCE_DIR}
                     ${GLI_SOURCE_DIR}
                     ${VKS_BASE_DIR}/include
-                    ${VKS_DEFERRED_DIR}/include
-                    ${VKS_VISBUFF_DIR}/include
+                    ${VKS_FPLUS_DIR}
                     ${TINYOBJLOADER_SOURCE_DIR}
                     ${SONGHOTIMER_SOURCE_DIR}/include
                     ${ASSIMP_SOURCE_DIR}/include
@@ -226,28 +236,13 @@ set(VKS_BASE_SOURCES
   ${VKS_BASE_DIR}/source/vulkan_tools.cpp
   ${VKS_BASE_DIR}/source/vulkan_uniform_data.cpp)
 
-set(VKS_VISBUFF_HEADERS
-  ${VKS_VISBUFF_DIR}/include/visbuff_scene.h
-  ${VKS_VISBUFF_DIR}/include/renderer.h)
-set(VKS_VISBUFF_SOURCES
-  ${VKS_VISBUFF_DIR}/source/visbuff_scene.cpp
-  ${VKS_VISBUFF_DIR}/source/renderer.cpp
-  ${VKS_VISBUFF_DIR}/source/main.cpp)
-
-set(VKS_DEFERRED_HEADERS
-  ${VKS_DEFERRED_DIR}/include/deferred_scene.h
-  ${VKS_DEFERRED_DIR}/include/deferred_renderer.h)
-set(VKS_DEFERRED_SOURCES
-  ${VKS_DEFERRED_DIR}/source/deferred_scene.cpp
-  ${VKS_DEFERRED_DIR}/source/deferred_renderer.cpp
-  ${VKS_DEFERRED_DIR}/source/main.cpp)
-
-## Find the vulkan libraries
-#if(WIN32)
-  #find_library(VULKAN_LIB NAMES vulkan-1 vulkan PATHS ${CMAKE_SOURCE_DIR}/libs/vulkan)
-#else(WIN32)
-  #find_library(VULKAN_LIB NAMES libvulkan.so PATHS ${CMAKE_SOURCE_DIR}/libs/vulkan)
-#endif(WIN32)
+set(VKS_FPLUS_HEADERS
+  ${VKS_FPLUS_DIR}/fplus_scene.h
+  ${VKS_FPLUS_DIR}/fplus_renderer.h)
+set(VKS_FPLUS_SOURCES
+  ${VKS_FPLUS_DIR}/fplus_scene.cpp
+  ${VKS_FPLUS_DIR}/fplus_renderer.cpp
+  ${VKS_FPLUS_DIR}/main.cpp)
 
 # Create shared library
 add_library(vksagres
@@ -255,16 +250,9 @@ add_library(vksagres
   ${VKS_BASE_SOURCES})
 
 # Create the executables
-add_executable(vksagres-deferred
-  ${VKS_DEFERRED_HEADERS}
-  ${VKS_DEFERRED_SOURCES})
-add_executable(vksagres-visbuffer
-  ${VKS_VISBUFF_HEADERS}
-  ${VKS_VISBUFF_SOURCES})
-
-
-#message(STATUS "${Vulkan_LIBRARIES}")
-#message(STATUS "${Vulkan_LIBRARIES}")
+add_executable(vksagres-fplus
+  ${VKS_FPLUS_HEADERS}
+  ${VKS_FPLUS_SOURCES})
 
 # Link libraries to it
 target_link_libraries(vksagres
@@ -278,51 +266,12 @@ target_link_libraries(vksagres
   EASTL
   inih
   shaderc)
-target_link_libraries(vksagres-deferred
-  vksagres)
-target_link_libraries(vksagres-visbuffer
+target_link_libraries(vksagres-fplus
   vksagres)
 
-# Compile shaders in original assets folder
-#add_custom_command(TARGET vksagres
-  #PRE_BUILD
-  #COMMAND {$CMAKE_SOURCE_DIR}/assets/compile
-
-
-# Copy assets into build folder
-if(NOT EXISTS ${CMAKE_CURRENT_BINARY_DIR}/../assets)
-  file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/assets 
-       DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/../)
-  message(WARNING "Assets folder in build folder didn't exists; created it.")
-endif()
-
-
-# Gather all the shaders
-file(GLOB VKS_SHADERS
-  "${CMAKE_SOURCE_DIR}/assets/shaders/*.vert"
-  "${CMAKE_SOURCE_DIR}/assets/shaders/*.frag"
-)
-
-foreach(shader ${VKS_SHADERS})
-  # Change the shader path to be the one relative to the binary directory
-  string(REPLACE
-    "${CMAKE_SOURCE_DIR}"
-    "${CMAKE_BINARY_DIR}/.."
-    shader_path_to_binary
-    "${shader}")
-
-  add_custom_command(
-    OUTPUT "${shader_path_to_binary}"
-    COMMAND ${CMAKE_COMMAND} -E copy
-      "${shader}" "${shader_path_to_binary}"
-    DEPENDS "${shader}")
-
-  list(APPEND VKS_BUILD_SHADERS ${shader_path_to_binary})
-endforeach(shader)
-
-# Create empty target which will be always built to copy shaders every time
-# the build is launched, plus it adds the shaders in IDEs
-add_custom_target(shaders
-  ALL
-  DEPENDS ${VKS_BUILD_SHADERS}
-  SOURCES ${VKS_SHADERS}) 
+# Set folder for assets
+set(ASSETS_FOLDER ${CMAKE_CURRENT_SOURCE_DIR}/assets/)
+target_compile_definitions(vksagres-fplus
+  PUBLIC ASSETS_FOLDER=${ASSETS_FOLDER})
+target_compile_definitions(vksagres
+  PUBLIC ASSETS_FOLDER=${ASSETS_FOLDER})

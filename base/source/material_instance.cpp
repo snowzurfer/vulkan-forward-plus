@@ -8,24 +8,17 @@
 #include <material.h>
 #include <base_system.h>
 #include <vulkan_buffer.h>
-#include <deferred_renderer.h>
 
 namespace vks {
 
 MaterialInstanceBuilder::MaterialInstanceBuilder(
     const eastl::string &inst_name,
-    const eastl::string &mat_name,
     const eastl::string &mats_directory,
-    const VkDescriptorPool desc_pool,
-    const VkDescriptorSetLayout desc_set_layout,
     const VkSampler aniso_sampler)
     : inst_name_(inst_name),
-      mat_name_(mat_name),
       mats_directory_(mats_directory),
       consts_(),
       textures_(),
-      desc_pool_textures_(desc_pool),
-      desc_set_layout_(desc_set_layout),
       aniso_sampler_(aniso_sampler) {}
 
 void MaterialInstanceBuilder::AddTexture(
@@ -73,12 +66,8 @@ void MaterialInstance::Init(
       }
     }
     if (loaded_texture == nullptr) {
-      texture_manager()->Load2DTexture(
-          device,
-          kBaseAssetsPath + "dummy.ktx", 
-          VK_FORMAT_BC2_UNORM_BLOCK,
-          &loaded_texture,
-          builder.aniso_sampler());
+      loaded_texture = texture_manager()->GetTextureByName(
+          STR(ASSETS_FOLDER) "dummy.ktx");
     }
 
     textures_[tools::ToUnderlying(builder.textures()[i].type)] = loaded_texture;
@@ -88,13 +77,8 @@ void MaterialInstance::Init(
   uint32_t textures_count = SCAST_U32(textures_.size());
   for (uint32_t i = 0U; i < textures_count; i++) {
     if (textures_[i] == nullptr) {
-      texture_manager()->Load2DTexture(
-        device,
-        kBaseAssetsPath + "dummy.ktx", 
-        VK_FORMAT_R8G8B8A8_UNORM,
-        &textures_[i],
-        builder.aniso_sampler());
-      LOG("Texture hadn't been loaded.");
+      textures_[i] = texture_manager()->GetTextureByName(
+          STR(ASSETS_FOLDER) "dummy.ktx");
     }
   }
 

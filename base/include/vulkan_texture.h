@@ -36,12 +36,9 @@ class VulkanTexture {
 
   // Get the DescriptorImageInfo relative to this texture so that
   // it can be used in descriptor sets updates
-  /**
-   * @brief Get the descriptorimageinfo relative to this texture
-   *
-   * @return A VkDescriptorImageInfo relative to this texture
-   */
   VkDescriptorImageInfo GetDescriptorImageInfo() const;
+  
+  VkDescriptorImageInfo GetDescriptorImageInfo(const VkSampler sampler) const;
 
   const VulkanImage *image() const { return image_.get(); };
   VulkanImage *image() { return image_.get(); };

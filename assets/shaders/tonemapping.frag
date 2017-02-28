@@ -5,19 +5,19 @@
 
 #define kAccumBufferBindingPos 7
 
-layout (set = 0, binding = kAccumBufferBindingPos) uniform
-  sampler2D accumm_buff;
+layout (input_attachment_index = 0, set = 0, binding = kAccumBufferBindingPos) uniform
+  subpassInput accumm_buff;
 
 layout (location = 0) out vec4 colour;
 
-void main() {
-  const float exposure = 0.01f;
+layout (constant_id = 0) const float kExposure = 0.01f;
 
-  vec3 hdr_colour = texelFetch(accumm_buff, ivec2(gl_FragCoord.xy), 0).rgb;
-  float attenuation = texelFetch(accumm_buff, ivec2(gl_FragCoord.xy), 0).a;
+void main() {
+  vec3 hdr_colour = subpassLoad(accumm_buff).rgb;
+  //float attenuation = texelFetch(accumm_buff), 0).a;
 
   // Reinhard tone mapping
-  vec3 mapped = vec3(1.f) - exp(-hdr_colour * exposure);
+  vec3 mapped = vec3(1.f) - exp(-hdr_colour * kExposure);
 
-  colour = vec4(mapped, attenuation);
+  colour = vec4(mapped, 1.f);
 }

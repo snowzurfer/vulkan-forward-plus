@@ -706,6 +706,7 @@ VkComputePipelineCreateInfo ComputePipelineCreateInfo() {
   VkComputePipelineCreateInfo structure;
   structure.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
   structure.pNext = nullptr;
+  structure.flags = 0U;
 
   return structure;
 }
@@ -923,6 +924,30 @@ VkImageMemoryBarrier ImageMemoryBarrier(
 	
   return structure;
 }
+
+VkBufferMemoryBarrier BufferMemoryBarrier(
+    VkAccessFlags      srcAccessMask,
+    VkAccessFlags      dstAccessMask,
+    uint32_t           srcQueueFamilyIndex,
+    uint32_t           dstQueueFamilyIndex,
+    VkBuffer           buffer,
+    VkDeviceSize       offset,
+    VkDeviceSize       size) {
+  VkBufferMemoryBarrier structure = {
+    VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+    nullptr,
+    srcAccessMask,
+    dstAccessMask,
+    srcQueueFamilyIndex,
+    dstQueueFamilyIndex,
+    buffer,
+    offset,
+    size
+  };
+
+  return structure;
+}
+
 VkImageMemoryBarrier ImageMemoryBarrier() {
 	VkImageMemoryBarrier structure;
 
@@ -1157,16 +1182,31 @@ VkPipelineColorBlendStateCreateInfo PipelineColorBlendStateCreateInfo(
 		uint32_t                                      attachmentCount,
 		const VkPipelineColorBlendAttachmentState*    pAttachments,
 		float                                         *blendConstants) {
-	VkPipelineColorBlendStateCreateInfo structure = {
-		VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-		nullptr,
-		0U,
-		logicOpEnable,
-		logicOp,
-		attachmentCount,
-		pAttachments,
-		*blendConstants
-	};
+  VkPipelineColorBlendStateCreateInfo structure;
+  if (blendConstants == nullptr) {
+    structure = {
+      VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+      nullptr,
+      0U,
+      logicOpEnable,
+      logicOp,
+      attachmentCount,
+      pAttachments,
+      {0.f, 0.f, 0.f, 0.f}
+    };
+  }
+  else {
+    structure = {
+    VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+    nullptr,
+    0U,
+    logicOpEnable,
+    logicOp,
+    attachmentCount,
+    pAttachments,
+    *blendConstants
+    };
+  }
 
 	return structure;
 }
