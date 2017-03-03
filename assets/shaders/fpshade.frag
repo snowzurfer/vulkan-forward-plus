@@ -42,6 +42,11 @@ struct Light {
 
 layout (constant_id = 0) const uint num_materials = 1U;
 layout (constant_id = 1) const uint num_lights = 1U;
+layout (constant_id = 3) const uint kTileSize = 16U;
+const uint kMaxLightsPerTile = 50U;
+const uint kRasterWidth = 1280U;
+const uint kRasterHeight = 720U;
+const uint kTilesWidth = kRasterWidth / kTileSize;
 
 // Could be packed better but it's kept like this until optimisation stage
 struct MatConsts {
@@ -79,10 +84,6 @@ layout (std430, set = 0, binding = kLightsArrayBindingPos) buffer LightsArray {
 
 layout (std430, set = 0, binding = kLightsIdxsBindingPos) buffer LightsIdxs {
   uint lights_idxs[];
-};
-
-layout (std430, set = 0, binding = kLightsGridBindingPos) buffer LightsGrid {
-  uint lights_grid[];
 };
 
 void GetAttributes(
@@ -167,5 +168,8 @@ void main() {
     spec_albedo,
     spec_power);
 
-  hdr_colour = vec4(lighting, attenuation);
+  uint idx = ((uint(gl_FragCoord.x) / kTileSize) + ((uint(gl_FragCoord.y) / kTileSize) * kTilesWidth));
+  uint lights_count = lights_idxs[idx];
+
+  hdr_colour = vec4(idx, gl_FragCoord.xy, lights_count);
 }

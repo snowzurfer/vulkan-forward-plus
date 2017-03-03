@@ -86,7 +86,8 @@ void FPlusScene::DoInit() {
         aiProcess_CalcTangentSpace |
           aiProcess_GenSmoothNormals |
           aiProcess_Triangulate |
-          aiProcess_JoinIdenticalVertices,
+          aiProcess_JoinIdenticalVertices |
+          aiProcess_ConvertToLeftHanded,
       vertex_setup,
       &nanosuit);
 

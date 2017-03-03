@@ -4,8 +4,6 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
-// TODO: it should be better done in view space
-// TODO: 3d position based clustered shading
 #define kProjViewMatricesBindingPos 0
 #define kDepthBufferBindingPos 1
 #define kLightsArrayBindingPos 8
@@ -17,10 +15,10 @@
 #define FLT_MAX_UINT 0x7f7fffff
 
 layout (constant_id = 0) const uint kTileSize = 16U;
-layout (constant_id = 1) const uint num_lights = 1U;
-layout (constant_id = 2) const uint kMaxLightsPerTile = 50U;
-layout (constant_id = 3) const uint kRasterWidth = 0U;
-layout (constant_id = 4) const uint kRasterHeight = 0U;
+layout (constant_id = 1) const uint num_lights = 2U;
+const uint kMaxLightsPerTile = 50U;
+const uint kRasterWidth = 1280U;
+const uint kRasterHeight = 720U;
 const uint kNumTilesX = kRasterWidth / kTileSize;
 
 struct Light {
@@ -28,14 +26,13 @@ struct Light {
   vec4 diff_colour;
   vec4 spec_colour;
 };
-const uint LightSize = 48U; // In bytes!
 
-layout (std430, set = 0, binding = kLightsArrayBindingPos) buffer readonly LightsArray {
+layout (std430, set = 0, binding = kLightsArrayBindingPos) readonly buffer LightsArray {
   Light lights[num_lights];
 };
 
-layout (std430, set = 0, binding = kLightsIdxsBindingPos) buffer writeonly LightsIdx{
-  uint lights_idxs[kTileSize * kTileSize * kMaxLightsPerTile];
+layout (std430, set = 0, binding = kLightsIdxsBindingPos) writeonly buffer LightsIdx{
+  uint lights_idxs[];
 };
 
 // Group shared memory to calculate minimum and maximum z extents
@@ -103,29 +100,30 @@ vec4 ConvertProjToView(vec4 p) {
 
 // convert a depth value from post-projection space into view space
 float ConvertProjDepthToView(float z) {
-  z = 1.f / (z * inv_proj[2][3] + inv_proj[3][3]);
+  z = -1.f / (z * inv_proj[2][3] + inv_proj[3][3]);
   return z;
 }
 
-void CalcMinMaxZ(uvec3 global_invocation_id) {
+float CalcMinMaxZ(uvec3 global_invocation_id) {
   ivec2 idx = ivec2(global_invocation_id.x, global_invocation_id.y);
   float depth = texelFetch(depth_buffer, idx, 0).x;
   float view_z = ConvertProjDepthToView(depth);
-  uint z = floatBitsToUint(view_z);
+  uint z = floatBitsToUint(-view_z);
 
   if (depth != 0.f) {
-    atomicMax(z_max_lds, z);
     atomicMin(z_min_lds, z);
+    atomicMax(z_max_lds, z);
   }
+
+  return view_z;
 }
 
-
-layout (local_size_x = kTileSize, local_size_y = kTileSize) in;
+layout (local_size_x = 16, local_size_y = 16) in;
 void main() {
   // Reset values using the first thread of a group
 	if (gl_LocalInvocationIndex == 0) {
-		z_max_lds = FLT_MAX_UINT;
-		z_min_lds = 0;
+		z_max_lds = 0;
+		z_min_lds = FLT_MAX_UINT;
     lights_count_tile_lds = 0;
   }
 
@@ -137,11 +135,11 @@ void main() {
     uint rast_yt = kTileSize * gl_WorkGroupID.y;
     uint rast_xb = kTileSize * (gl_WorkGroupID.x + 1);
     uint rast_yb = kTileSize * (gl_WorkGroupID.y + 1);
+    
 
     // Calculate position of the corners of this group's tile in NDC space
     // Different from the AMD DX 11 sample because Vulkan's NDC space has
     // the Y axis pointing downwards
-    float rast_float = float(rast_xt);
     vec4 top_left = vec4(
       float(rast_xt) / float(kRasterWidth) * 2.f - 1.f,
       float(rast_yt) / float(kRasterHeight) * 2.f - 1.f,
@@ -185,23 +183,25 @@ void main() {
   float min_z = FLT_MAX;
   float max_z = 0.f; 
 
-  CalcMinMaxZ(gl_GlobalInvocationID);
+  float view_z = CalcMinMaxZ(gl_GlobalInvocationID);
 
   groupMemoryBarrier();
+    
   
   // Reinterpret the atomically added values to floats
-  min_z = uintBitsToFloat(z_min_lds);
-  max_z = uintBitsToFloat(z_max_lds);
+  min_z = -(uintBitsToFloat(z_min_lds));
+  max_z = -(uintBitsToFloat(z_max_lds));
+
 
   // Loop over the point lights and run a sphere - frustum intersection test
   const uint kThreadsPerTile = kTileSize * kTileSize;
   for (uint i = gl_LocalInvocationIndex; i < num_lights; i += kThreadsPerTile) {
     vec3 light_centre = lights[i].pos_radius.xyz;
     float light_radius = lights[i].pos_radius.w;
-    if (TestFrustumSides(lights[i].pos_radius.xyz, lights[i].pos_radius.w,
+    if (TestFrustumSides(light_centre, light_radius,
           frustum_eqn_0, frustum_eqn_1, frustum_eqn_2, frustum_eqn_3)) {
-      if (light_centre.z - max_z > -light_radius && 
-          min_z - light_centre.z > -light_radius) {
+      if (max_z - light_centre.z < light_radius && 
+          light_centre.z - min_z < light_radius) {
         uint dst_idx = atomicAdd(lights_count_tile_lds, 1);
         lights_intersected_tile_lds[dst_idx] = i;
       }
@@ -216,12 +216,30 @@ void main() {
   // of this tile
   uint start_offset = tile_id_1d * kMaxLightsPerTile;
   
-  for (uint i = gl_LocalInvocationIndex; i < lights_count_tile_lds; i += kThreadsPerTile) {
-    lights_idxs[start_offset + i] = lights_intersected_tile_lds[i];
+  // Mark the start of the list using the thread number 0
+  if (gl_LocalInvocationIndex == 0) {
+    lights_idxs[start_offset] = lights_count_tile_lds;
   }
   
-  // Mark the end of the list using the thread number 0
-  if (gl_LocalInvocationIndex == 0) {
-    lights_idxs[start_offset + lights_count_tile_lds] = LIGHT_IDX_BUFFER_SENTINEL;
+  for (uint i = gl_LocalInvocationIndex; i < lights_count_tile_lds; i += kThreadsPerTile) {
+    lights_idxs[start_offset + i + 1] = lights_intersected_tile_lds[i];
   }
+  
+  
+  /*if (gl_GlobalInvocationID.x == 5 && gl_GlobalInvocationID.y == 1) {
+        lights_idxs[8] = uint(-min_z * 1000.f);
+        lights_idxs[9] = uint(-max_z * 1000.f);
+        lights_idxs[10] = uint(view_z * 1000.f);
+        lights_idxs[11] = lights_count_tile_lds;
+        lights_idxs[12] = gl_LocalInvocationIndex;
+        
+      }
+  if (gl_GlobalInvocationID.x == 0 && gl_GlobalInvocationID.y == 0) {
+        lights_idxs[3] = uint(-min_z * 1000.f);
+        lights_idxs[4] = uint(-max_z * 1000.f);
+        lights_idxs[5] = uint(view_z * 1000.f);
+        lights_idxs[6] = lights_count_tile_lds;
+        lights_idxs[7] = gl_LocalInvocationIndex;
+        
+      }*/
 }

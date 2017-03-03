@@ -35,6 +35,7 @@ const uint32_t kMaxLightsPerTile = 50U;
 const uint32_t kMaxLightsScene = 3600U;
 const uint32_t kWidthInTiles = kWindowWidth / kTileSize;
 const uint32_t kHeightInTiles = kWindowHeight / kTileSize;
+const uint32_t kTotalTilesNum = kWidthInTiles * kHeightInTiles;
 const uint32_t kProjViewMatricesBindingPos = 0U;
 const uint32_t kDepthBufferBindingPos = 1U;
 const uint32_t kDiffuseTexturesArrayBindingPos = 2U;
@@ -227,7 +228,6 @@ void FPlusRenderer::UpdateBuffers(const VulkanDevice &device) {
   uint32_t mat4_size = SCAST_U32(sizeof(glm::mat4));
   uint32_t mat4_group_size = mat4_size * 4U;
   uint32_t lights_array_size = (SCAST_U32(sizeof(Light)) * num_lights);
-  uint32_t lights_indices_array_size = SCAST_U32(sizeof(uint32_t)) * kMaxLightsPerTile;
   uint32_t mat_consts_array_size =
     (SCAST_U32(sizeof(MaterialConstants)) * num_mat_instances);
 
@@ -243,7 +243,7 @@ void FPlusRenderer::UpdateBuffers(const VulkanDevice &device) {
   mapped_u8 += mat4_group_size;
 
   memcpy(mapped_u8, transformed_lights.data(), lights_array_size);
-  mapped_u8 += lights_array_size + lights_indices_array_size;
+  mapped_u8 += lights_array_size;
 
   memcpy(mapped_u8, mat_consts_.data(), mat_consts_array_size);
 
@@ -347,7 +347,7 @@ void FPlusRenderer::SetupRenderPass(const VulkanDevice &device) {
       VK_ATTACHMENT_STORE_OP_STORE,
       VK_ATTACHMENT_LOAD_OP_DONT_CARE,
       VK_ATTACHMENT_STORE_OP_DONT_CARE,
-      VK_IMAGE_LAYOUT_UNDEFINED,
+      VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
       VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
   uint32_t depth_buf_prepass_id = depth_prepass_renderpass_->AddAttachment(
       0U,
@@ -737,7 +737,7 @@ void FPlusRenderer::SetupUniformBuffers(const VulkanDevice &device) {
   uint32_t lights_array_size = (SCAST_U32(sizeof(Light)) * num_lights);
   uint32_t mat_consts_array_size =
     (SCAST_U32(sizeof(MaterialConstants)) * num_mat_instances);
-  uint32_t lights_indices_array_size = SCAST_U32(sizeof(uint32_t)) * kMaxLightsPerTile;
+  uint32_t lights_indices_array_size = SCAST_U32(sizeof(uint32_t)) * kMaxLightsPerTile * num_lights * kTotalTilesNum;
   uint32_t latest_size_offset = 0U;
   
   // Setup the random generation classes for the SSAO step
@@ -819,8 +819,7 @@ void FPlusRenderer::SetupUniformBuffers(const VulkanDevice &device) {
     lights_indices_array_size;
     //noise_uv_scale_size +
     //ssao_kernel_size;
-  buff_init_info.memory_property_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
-    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+  buff_init_info.memory_property_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
   buff_init_info.buffer_usage_flags = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
   light_idxs_buff_.Init(device, buff_init_info);
 
@@ -1094,7 +1093,7 @@ void FPlusRenderer::SetupDescriptorSets(const VulkanDevice &device) {
   uint32_t lights_array_size = (SCAST_U32(sizeof(Light)) * num_lights);
   uint32_t mat_consts_array_size =
     (SCAST_U32(sizeof(MaterialConstants)) * num_mat_instances);
-  uint32_t lights_indices_array_size = SCAST_U32(sizeof(uint32_t)) * kMaxLightsPerTile;
+  uint32_t lights_indices_array_size = SCAST_U32(sizeof(uint32_t)) * kMaxLightsPerTile * num_lights * kTotalTilesNum;
   uint32_t lights_grid_size =
     SCAST_U32(sizeof(uint32_t)) *
     (kWindowWidth / kTileSize) * (kWindowHeight / kTileSize);
@@ -1521,6 +1520,9 @@ void FPlusRenderer::SetupGraphicsCommandBuffers(const VulkanDevice &device) {
 
     tonemap_material_->BindPipeline(cmd_buffers_[i],
                                       VK_PIPELINE_BIND_POINT_GRAPHICS);
+    
+    fullscreenquad_->BindVertexBuffer(cmd_buffers_[i]);  
+    fullscreenquad_->BindIndexBuffer(cmd_buffers_[i]);  
 
     vkCmdDrawIndexed(
         cmd_buffers_[i],
@@ -1548,7 +1550,6 @@ void FPlusRenderer::SetupComputeCommandBuffers(const VulkanDevice &device) {
 
   // Use a barrier to allow the buffers to be read by the compute pipeline
   eastl::array<VkBufferMemoryBarrier, 1U> barriers_before;
-  uint32_t lights_indices_array_size = SCAST_U32(sizeof(uint32_t)) * kMaxLightsPerTile;
   barriers_before[0U] = tools::inits::BufferMemoryBarrier(
     VK_ACCESS_SHADER_READ_BIT,
     VK_ACCESS_SHADER_WRITE_BIT,
@@ -1556,7 +1557,7 @@ void FPlusRenderer::SetupComputeCommandBuffers(const VulkanDevice &device) {
     device.compute_queue().index,
     light_idxs_buff_.buffer(),
     0U,
-    lights_indices_array_size);
+    light_idxs_buff_.size());
 
   vkCmdPipelineBarrier(
     cmd_buff_compute_,
@@ -1580,7 +1581,7 @@ void FPlusRenderer::SetupComputeCommandBuffers(const VulkanDevice &device) {
       0U,
       nullptr);
 
-  vkCmdDispatch(cmd_buff_compute_, kWidthInTiles, kHeightInTiles, 0U);
+  vkCmdDispatch(cmd_buff_compute_, kWidthInTiles, kHeightInTiles, 1U);
 
   // Use a barrier to allow the buffers to be read by the compute pipeline
   eastl::array<VkBufferMemoryBarrier, 1U> barriers_after;
@@ -1591,7 +1592,7 @@ void FPlusRenderer::SetupComputeCommandBuffers(const VulkanDevice &device) {
     device.graphics_queue().index,
     light_idxs_buff_.buffer(),
     0U,
-    lights_indices_array_size);
+    light_idxs_buff_.size());
 
   //VkImageSubresourceRange subresource_range;
   //subresource_range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
@@ -1723,6 +1724,7 @@ void FPlusRenderer::SetupMaterialPipelines(
     0U,
     cam_->viewport());
   builder_depth_prepass->AddShader(eastl::move(depth_vert));
+  builder_depth_prepass->SetDepthTest(VK_COMPARE_OP_LESS);
   builder_depth_prepass->SetDepthWriteEnable(VK_TRUE);
   builder_depth_prepass->SetDepthTestEnable(VK_TRUE);
 
@@ -1831,7 +1833,7 @@ void FPlusRenderer::SetupMaterialPipelines(
   builder_shade->AddShader(eastl::move(shade_frag));
   builder_shade->SetDepthTestEnable(VK_TRUE);
   builder_shade->SetDepthWriteEnable(VK_FALSE);
-  builder_shade->SetDepthTest(VK_COMPARE_OP_EQUAL);
+  builder_shade->SetDepthTest(VK_COMPARE_OP_LESS_OR_EQUAL);
 
   shading_material_ =
     material_manager()->CreateMaterial(device, eastl::move(builder_shade)); 
@@ -1845,7 +1847,7 @@ void FPlusRenderer::SetupMaterialPipelines(
 
   tone_frag->AddSpecialisationEntry(
     kTonemapExposureSpecConstPos,
-    SCAST_FLOAT(sizeof(float)),
+    SCAST_U32(sizeof(float)),
     SCAST_CVOIDPTR(&kTonemapExposure));
 
   eastl::unique_ptr<MaterialShader> tone_vert =
@@ -2007,11 +2009,11 @@ void FPlusRenderer::SetupFullscreenQuad(const VulkanDevice &device){
   model_builder.AddVertex(vtx);
 
   model_builder.AddIndex(0U);
+  model_builder.AddIndex(2U);
   model_builder.AddIndex(1U);
-  model_builder.AddIndex(2U);
   model_builder.AddIndex(0U);
-  model_builder.AddIndex(2U);
   model_builder.AddIndex(3U);
+  model_builder.AddIndex(2U);
 
   Mesh quad_mesh(
     0U,
