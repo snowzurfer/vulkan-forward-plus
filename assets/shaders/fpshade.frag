@@ -17,6 +17,8 @@
 #define kModelMatricesBindingPos 0
 #define kMaterialIDsBindingPos 1
 
+#define LIGHT_IDX_BUFFER_SENTINEL 0x7fffffff
+
 layout (location = 0) in vec3 pos_vs;
 layout (location = 1) in vec3 norm_vs;
 layout (location = 2) in vec3 uv_fs;
@@ -42,6 +44,11 @@ struct Light {
 
 layout (constant_id = 0) const uint num_materials = 1U;
 layout (constant_id = 1) const uint num_lights = 1U;
+layout (constant_id = 3) const uint kTileSize = 16U;
+const uint kMaxLightsPerTile = 50U;
+const uint kRasterWidth = 1280U;
+const uint kRasterHeight = 720U;
+const uint kTilesWidth = kRasterWidth / kTileSize;
 
 // Could be packed better but it's kept like this until optimisation stage
 struct MatConsts {
@@ -73,11 +80,11 @@ layout (std430, set = 1, binding = kMaterialIDsBindingPos) buffer MatIDs {
   uint mat_ids[];
 };
 
-layout (std430, set = 0, binding = kLightsArrayBindingPos) buffer LightsArray {
+layout (std430, set = 0, binding = kLightsArrayBindingPos) readonly buffer LightsArray {
   Light lights[num_lights];
 };
 
-layout (std430, set = 0, binding = kLightsIdxsBindingPos) buffer LightsIdxs {
+layout (std430, set = 0, binding = kLightsIdxsBindingPos) readonly buffer LightsIdxs {
   uint lights_idxs[];
 };
 
@@ -115,6 +122,7 @@ void GetAttributes(
 
 
 vec3 CalcLighting(
+    in vec2 screen_pos,
     in vec3 normal,
     in vec3 position,
     in vec3 diff_albedo,
@@ -122,26 +130,31 @@ vec3 CalcLighting(
     in float spec_power) {
   vec3 colour = vec3(0.f);
 
-  for (uint i = 0; i < num_lights; i++) {
+  // Calculate the tile for this pixel
+  uint idx = ((uint(screen_pos.x) / kTileSize) + ((uint(screen_pos.y) / kTileSize) * kTilesWidth)) * kMaxLightsPerTile;
+  uint li = lights_idxs[idx];
+  while (li != LIGHT_IDX_BUFFER_SENTINEL) {
     // Calculate diffuse term of the BRDF
-    vec3 L = lights[i].pos_radius.xyz - position;
+    vec3 L = lights[li].pos_radius.xyz - position;
     
     float dist = length(L);
-    float attenuation = max(0.f, 1.f - (dist / lights[i].pos_radius.w));
+    float attenuation = max(0.f, 1.f - (dist / lights[li].pos_radius.w));
 
     L /= dist;
 
     float nDotL = max(0.f, dot(normal, L));
-    vec3 diffuse = diff_albedo * lights[i].diff_colour.rgb * nDotL;
+    vec3 diffuse = diff_albedo * lights[li].diff_colour.rgb * nDotL;
 
     // Calculate the specular term of the BRDF
     vec3 V = normalize(-position);
     vec3 H = normalize(L + V);
     vec3 specular = pow(max(dot(normal, H), 0.f), 94.f) *
-      lights[i].spec_colour.rgb * spec_albedo * nDotL; 
+      lights[li].spec_colour.rgb * spec_albedo * nDotL; 
     
-    colour = colour + ((specular + diffuse) * vec3(attenuation));
+    colour = diffuse;
 
+    ++idx;
+    li = lights_idxs[idx];
   }
 
   return colour;
@@ -159,13 +172,20 @@ void main() {
     spec_albedo,
     spec_power);
 
-  float attenuation = 0.f;
-  vec3 lighting = CalcLighting(
+//  float attenuation = 0.f;
+/*  vec3 lighting = CalcLighting(
+    gl_FragCoord.xy,
     normal,
     pos_vs,
     diff_albedo,
     spec_albedo,
-    spec_power);
+    spec_power);*/
+  
+  vec3 colour = vec3(0.f);
+// Calculate the tile for this pixel
+  uint idx = ((uint(gl_FragCoord.x) / kTileSize) + ((uint(gl_FragCoord.y) / kTileSize) * kTilesWidth));
+  uint lights_count = lights[0].pos_radius.w;
 
-  hdr_colour = vec4(lighting, attenuation);
+
+  hdr_colour = vec4(diff_albedo, lights_idxs[1]);
 }
