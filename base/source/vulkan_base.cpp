@@ -141,11 +141,11 @@ void VulkanBase::CreateInstance() {
   const char** glfw_extensions;
   glfw_extensions = glfwGetRequiredInstanceExtensions(&glfw_extension_count);
 
-  eastl::vector<const char *> extensions;
+  std::vector<const char *> extensions;
   extensions.assign(glfw_extensions, glfw_extensions +
                     glfw_extension_count);
   
-  eastl::vector<const char *> layers;
+  std::vector<const char *> layers;
 
 #ifndef NDEBUG
   // Use validation layers
@@ -302,7 +302,8 @@ void VulkanBase::CreateCallback() {
     VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT,
     nullptr,
     VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT |
-      VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
+      VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT |
+      VK_DEBUG_REPORT_INFORMATION_BIT_EXT,
     &DebugReportCallback,
     nullptr 
   };

@@ -116,14 +116,13 @@ void GetAttributes(
 
 
 vec3 CalcLighting(
+    in uint i,
     in vec3 normal,
     in vec3 position,
     in vec3 diff_albedo,
     in vec3 spec_albedo,
     in float spec_power) {
-  vec3 colour = vec3(0.f);
 
-  for (uint i = 0; i < num_lights; i++) {
     // Calculate diffuse term of the BRDF
     vec3 L = lights[i].pos_radius.xyz - position;
     
@@ -141,11 +140,7 @@ vec3 CalcLighting(
     vec3 specular = pow(max(dot(normal, H), 0.f), 94.f) *
       lights[i].spec_colour.rgb * spec_albedo * nDotL; 
     
-    colour = colour + ((specular + diffuse) * vec3(attenuation));
-
-  }
-
-  return colour;
+    return ((specular + diffuse) * vec3(attenuation));
 }
 
 void main() {
@@ -161,15 +156,27 @@ void main() {
     spec_power);
 
   float attenuation = 0.f;
-  vec3 lighting = CalcLighting(
-    normal,
-    pos_vs,
-    diff_albedo,
-    spec_albedo,
-    spec_power);
+  uint idx = ((uint(gl_FragCoord.x) / kTileSize) + ((uint(gl_FragCoord.y) / kTileSize) * kTilesWidth)) *
+    kMaxLightsPerTile;
+  uint lights_count = lights_idxs[++idx];
+  vec3 lighting = vec3(0.f);
+ 
+  uint li = 0;
+  for (uint i = 0; i < 50; ++i) {
+    if (i >= lights_count) {
+      break;
+    }
+    li = lights_idxs[idx];
+    lighting = lighting + CalcLighting(
+        li,
+        normal,
+        pos_vs,
+        diff_albedo,
+        spec_albedo,
+        spec_power);
+    ++idx;
+  }
+ 
 
-  uint idx = ((uint(gl_FragCoord.x) / kTileSize) + ((uint(gl_FragCoord.y) / kTileSize) * kTilesWidth));
-  uint lights_count = lights_idxs[idx];
-
-  hdr_colour = vec4(idx, gl_FragCoord.xy, lights_count);
+  hdr_colour = vec4(lighting, 1.f);
 }

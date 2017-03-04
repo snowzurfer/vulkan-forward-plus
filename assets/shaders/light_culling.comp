@@ -219,27 +219,11 @@ void main() {
   // Mark the start of the list using the thread number 0
   if (gl_LocalInvocationIndex == 0) {
     lights_idxs[start_offset] = lights_count_tile_lds;
+    lights_idxs[start_offset + 4] = z_min_lds;
+    lights_idxs[start_offset + 5] = z_max_lds;
   }
   
   for (uint i = gl_LocalInvocationIndex; i < lights_count_tile_lds; i += kThreadsPerTile) {
     lights_idxs[start_offset + i + 1] = lights_intersected_tile_lds[i];
   }
-  
-  
-  /*if (gl_GlobalInvocationID.x == 5 && gl_GlobalInvocationID.y == 1) {
-        lights_idxs[8] = uint(-min_z * 1000.f);
-        lights_idxs[9] = uint(-max_z * 1000.f);
-        lights_idxs[10] = uint(view_z * 1000.f);
-        lights_idxs[11] = lights_count_tile_lds;
-        lights_idxs[12] = gl_LocalInvocationIndex;
-        
-      }
-  if (gl_GlobalInvocationID.x == 0 && gl_GlobalInvocationID.y == 0) {
-        lights_idxs[3] = uint(-min_z * 1000.f);
-        lights_idxs[4] = uint(-max_z * 1000.f);
-        lights_idxs[5] = uint(view_z * 1000.f);
-        lights_idxs[6] = lights_count_tile_lds;
-        lights_idxs[7] = gl_LocalInvocationIndex;
-        
-      }*/
 }

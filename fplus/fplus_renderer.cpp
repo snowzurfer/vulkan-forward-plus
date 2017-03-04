@@ -1832,7 +1832,7 @@ void FPlusRenderer::SetupMaterialPipelines(
   builder_shade->AddShader(eastl::move(shade_vert));
   builder_shade->AddShader(eastl::move(shade_frag));
   builder_shade->SetDepthTestEnable(VK_TRUE);
-  builder_shade->SetDepthWriteEnable(VK_FALSE);
+  builder_shade->SetDepthWriteEnable(VK_TRUE);
   builder_shade->SetDepthTest(VK_COMPARE_OP_LESS_OR_EQUAL);
 
   shading_material_ =
