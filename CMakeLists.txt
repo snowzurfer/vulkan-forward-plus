@@ -45,12 +45,12 @@ MinSizeRel. Default is Debug."
 endif(NOT CMAKE_BUILD_TYPE)
 
 if(MSVC)
-  # Force to always compile with W4
+  # Force to always compile with W1
   if(CMAKE_CXX_FLAGS_DEBUG MATCHES "/W[0-4]")
-    string(REGEX REPLACE "/W[0-4]" "/W4" CMAKE_CXX_FLAGS_DEBUG
+    string(REGEX REPLACE "/W[0-4]" "/W1" CMAKE_CXX_FLAGS_DEBUG
            "${CMAKE_CXX_FLAGS_DEBUG}")
   else()
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /W4")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /W1")
   endif()
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR
    CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
