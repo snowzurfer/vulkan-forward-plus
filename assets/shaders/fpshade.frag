@@ -88,10 +88,6 @@ layout (std430, set = 0, binding = kLightsIdxsBindingPos) readonly buffer Lights
   uint lights_idxs[];
 };
 
-layout (std430, set = 0, binding = kLightsGridBindingPos) buffer LightsGrid {
-  uint lights_grid[];
-};
-
 void GetAttributes(
     out vec3 normal,
     out vec3 diff_albedo,
@@ -122,18 +118,13 @@ void GetAttributes(
 
 
 vec3 CalcLighting(
-    in vec2 screen_pos,
+    in uint li,
     in vec3 normal,
     in vec3 position,
     in vec3 diff_albedo,
     in vec3 spec_albedo,
     in float spec_power) {
-  vec3 colour = vec3(0.f);
 
-  // Calculate the tile for this pixel
-  uint idx = ((uint(screen_pos.x) / kTileSize) + ((uint(screen_pos.y) / kTileSize) * kTilesWidth)) * kMaxLightsPerTile;
-  uint li = lights_idxs[idx];
-  while (li != LIGHT_IDX_BUFFER_SENTINEL) {
     // Calculate diffuse term of the BRDF
     vec3 L = lights[li].pos_radius.xyz - position;
     
@@ -151,13 +142,7 @@ vec3 CalcLighting(
     vec3 specular = pow(max(dot(normal, H), 0.f), 94.f) *
       lights[li].spec_colour.rgb * spec_albedo * nDotL; 
     
-    colour = diffuse;
-
-    ++idx;
-    li = lights_idxs[idx];
-  }
-
-  return colour;
+    return ((specular + diffuse) * vec3(attenuation));
 }
 
 void main() {
@@ -172,20 +157,28 @@ void main() {
     spec_albedo,
     spec_power);
 
-//  float attenuation = 0.f;
-/*  vec3 lighting = CalcLighting(
-    gl_FragCoord.xy,
-    normal,
-    pos_vs,
-    diff_albedo,
-    spec_albedo,
-    spec_power);*/
-  
-  vec3 colour = vec3(0.f);
-// Calculate the tile for this pixel
-  uint idx = ((uint(gl_FragCoord.x) / kTileSize) + ((uint(gl_FragCoord.y) / kTileSize) * kTilesWidth));
-  uint lights_count = lights[0].pos_radius.w;
+  float attenuation = 0.f;
+  uint idx = ((uint(gl_FragCoord.x) / kTileSize) + ((uint(gl_FragCoord.y) / kTileSize) * kTilesWidth)) *
+    kMaxLightsPerTile;
+  uint lights_count = lights_idxs[++idx];
+  vec3 lighting = vec3(0.f);
+ 
+  uint li = 0;
+  for (uint i = 0; i < 50; ++i) {
+    if (i >= lights_count) {
+      break;
+    }
+    li = lights_idxs[idx];
+    lighting = lighting + CalcLighting(
+        li,
+        normal,
+        pos_vs,
+        diff_albedo,
+        spec_albedo,
+        spec_power);
+    ++idx;
+  }
+ 
 
-
-  hdr_colour = vec4(diff_albedo, lights_idxs[1]);
+  hdr_colour = vec4(lighting, 1.f);
 }

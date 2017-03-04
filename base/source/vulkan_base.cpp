@@ -141,11 +141,11 @@ void VulkanBase::CreateInstance() {
   const char** glfw_extensions;
   glfw_extensions = glfwGetRequiredInstanceExtensions(&glfw_extension_count);
 
-  eastl::vector<const char *> extensions;
+  std::vector<const char *> extensions;
   extensions.assign(glfw_extensions, glfw_extensions +
                     glfw_extension_count);
   
-  eastl::vector<const char *> layers;
+  std::vector<const char *> layers;
 
 #ifndef NDEBUG
   // Use validation layers

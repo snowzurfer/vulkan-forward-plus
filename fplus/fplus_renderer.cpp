@@ -228,7 +228,6 @@ void FPlusRenderer::UpdateBuffers(const VulkanDevice &device) {
   uint32_t mat4_size = SCAST_U32(sizeof(glm::mat4));
   uint32_t mat4_group_size = mat4_size * 4U;
   uint32_t lights_array_size = (SCAST_U32(sizeof(Light)) * num_lights);
-  uint32_t lights_indices_array_size = SCAST_U32(sizeof(uint32_t)) * kMaxLightsPerTile;
   uint32_t mat_consts_array_size =
     (SCAST_U32(sizeof(MaterialConstants)) * num_mat_instances);
 
@@ -244,7 +243,7 @@ void FPlusRenderer::UpdateBuffers(const VulkanDevice &device) {
   mapped_u8 += mat4_group_size;
 
   memcpy(mapped_u8, transformed_lights.data(), lights_array_size);
-  mapped_u8 += lights_array_size + lights_indices_array_size;
+  mapped_u8 += lights_array_size;
 
   memcpy(mapped_u8, mat_consts_.data(), mat_consts_array_size);
 
@@ -1521,6 +1520,9 @@ void FPlusRenderer::SetupGraphicsCommandBuffers(const VulkanDevice &device) {
 
     tonemap_material_->BindPipeline(cmd_buffers_[i],
                                       VK_PIPELINE_BIND_POINT_GRAPHICS);
+    
+    fullscreenquad_->BindVertexBuffer(cmd_buffers_[i]);  
+    fullscreenquad_->BindIndexBuffer(cmd_buffers_[i]);  
 
     fullscreenquad_->BindVertexBuffer(cmd_buffers_[i]);
     fullscreenquad_->BindIndexBuffer(cmd_buffers_[i]);

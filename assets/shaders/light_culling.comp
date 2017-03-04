@@ -224,9 +224,10 @@ void main() {
   for (uint i = gl_LocalInvocationIndex; i < lights_count_tile_lds; i += kThreadsPerTile) {
     lights_idxs[start_offset + i + 1] = lights_intersected_tile_lds[i];
   }
+ 
+// JUST TEST STUFF 
   
-  
-  if (gl_GlobalInvocationID.x == 5 && gl_GlobalInvocationID.y == 1) {
+/*  if (gl_GlobalInvocationID.x == 5 && gl_GlobalInvocationID.y == 1) {
         lights_idxs[8] = uint(-min_z * 1000.f);
         lights_idxs[9] = uint(-max_z * 1000.f);
         lights_idxs[10] = uint(view_z * 1000.f);
@@ -241,5 +242,5 @@ void main() {
         lights_idxs[6] = lights_count_tile_lds;
         lights_idxs[7] = gl_LocalInvocationIndex;
         
-      }
+      } */
 }
