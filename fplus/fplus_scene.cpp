@@ -49,7 +49,7 @@ void FPlusScene::DoInit() {
     glm::vec3(100.f, 100.f, 100.f),
     glm::vec3(10.f, 10.f, 10.f),
     glm::vec3(40.f, 12.f, 17.f),
-    1.f);
+    1000.f);
 
   // Setup the vertex layout of the model to be passed
   eastl::vector<VertexElement> vtx_layout;

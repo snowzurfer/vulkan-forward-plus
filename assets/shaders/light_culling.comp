@@ -31,7 +31,7 @@ layout (std430, set = 0, binding = kLightsArrayBindingPos) readonly buffer Light
   Light lights[num_lights];
 };
 
-layout (std430, set = 0, binding = kLightsIdxsBindingPos) writeonly buffer LightsIdx{
+layout (std430, set = 0, binding = kLightsIdxsBindingPos) buffer LightsIdx{
   uint lights_idxs[];
 };
 
@@ -224,23 +224,4 @@ void main() {
   for (uint i = gl_LocalInvocationIndex; i < lights_count_tile_lds; i += kThreadsPerTile) {
     lights_idxs[start_offset + i + 1] = lights_intersected_tile_lds[i];
   }
- 
-// JUST TEST STUFF 
-  
-/*  if (gl_GlobalInvocationID.x == 5 && gl_GlobalInvocationID.y == 1) {
-        lights_idxs[8] = uint(-min_z * 1000.f);
-        lights_idxs[9] = uint(-max_z * 1000.f);
-        lights_idxs[10] = uint(view_z * 1000.f);
-        lights_idxs[11] = lights_count_tile_lds;
-        lights_idxs[12] = gl_LocalInvocationIndex;
-        
-      }
-  if (gl_GlobalInvocationID.x == 0 && gl_GlobalInvocationID.y == 0) {
-        lights_idxs[3] = uint(-min_z * 1000.f);
-        lights_idxs[4] = uint(-max_z * 1000.f);
-        lights_idxs[5] = uint(view_z * 1000.f);
-        lights_idxs[6] = lights_count_tile_lds;
-        lights_idxs[7] = gl_LocalInvocationIndex;
-        
-      } */
 }

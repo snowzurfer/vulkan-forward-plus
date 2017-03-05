@@ -1,4 +1,4 @@
-#version 440
+#version 450
 
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
@@ -160,24 +160,20 @@ void main() {
   float attenuation = 0.f;
   uint idx = ((uint(gl_FragCoord.x) / kTileSize) + ((uint(gl_FragCoord.y) / kTileSize) * kTilesWidth)) *
     kMaxLightsPerTile;
-  uint lights_count = lights_idxs[++idx];
+  uint lights_count = lights_idxs[idx++];
   vec3 lighting = vec3(0.f);
- 
+
   uint li = 0;
-  for (uint i = 0; i < 50; ++i) {
-    if (i >= lights_count) {
-      break;
-    }
+  for (uint i = 0; i < lights_count; ++i, ++idx) {
     li = lights_idxs[idx];
     lighting = lighting + CalcLighting(
-        li,
-        normal,
-        pos_vs,
-        diff_albedo,
-        spec_albedo,
-        spec_power);
-    ++idx;
-  }
+      li,
+      normal,
+      pos_vs,
+      diff_albedo,
+      spec_albedo,
+      spec_power);
+  } 
  
 
   hdr_colour = vec4(lighting, 1.f);

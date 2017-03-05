@@ -66,7 +66,7 @@ const uint32_t kNumMaterialsSpecConstPos = 0U;
 //const uint32_t kNumIndirectDrawsSpecConstPos = 1U;
 const uint32_t kNumLightsSpecConstPos = 1U;
 const uint32_t kTonemapExposureSpecConstPos = 0U;
-const float kTonemapExposure =0.8f;
+const float kTonemapExposure = 0.03f;
 //extern const uint32_t kVertexBuffersBaseBindPos;
 //extern const uint32_t kIndirectDrawCmdsBindingPos;
 //extern const uint32_t kIdxBufferBindPos;
