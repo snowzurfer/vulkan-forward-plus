@@ -785,7 +785,7 @@ void FPlusRenderer::SetupUniformBuffers(const VulkanDevice &device) {
     mat_consts_array_size;
     //noise_uv_scale_size +
     //ssao_kernel_size;
-  buff_init_info.memory_property_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
+  buff_init_info.memory_property_flags =
     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
   buff_init_info.buffer_usage_flags = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
   main_static_buff_.Init(device, buff_init_info);
@@ -1068,7 +1068,7 @@ void FPlusRenderer::SetupDescriptorSetAndPipeLayout(
     SCAST_U32(sizeof(uint32_t))
   };
 
-  VkPipelineLayoutCreateInfo pipe_layout_create_info =     tools::inits::PipelineLayoutCreateInfo(
+  VkPipelineLayoutCreateInfo pipe_layout_create_info = tools::inits::PipelineLayoutCreateInfo(
       DescSetLayoutTypes::num_items,
       desc_set_layouts_.data(),
       1U,
