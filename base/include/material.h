@@ -62,6 +62,7 @@ class MaterialShader {
   eastl::vector<VkSpecializationMapEntry> info_entries_;
   eastl::vector<uint8_t> infos_data_;
   ShaderTypes type_;
+  bool is_spv_;
   bool compiled_once_;
   VkPipelineShaderStageCreateInfo current_stage_create_info_;
 

@@ -18,9 +18,14 @@ MaterialShader::MaterialShader(
       info_entries_(),
       infos_data_(),
       type_(type),
+      is_spv_(false),
       compiled_once_(false),
       current_stage_create_info_() {
   current_stage_create_info_.module = VK_NULL_HANDLE;
+  size_t pos = file_name.find(eastl::string("spv"));
+  if (pos != eastl::string::npos) {
+    is_spv_ = true;
+  }
 }
 
 void MaterialShader::SetSpecialisation(const VkSpecializationInfo &info) {
@@ -65,42 +70,48 @@ VkPipelineShaderStageCreateInfo MaterialShader::Compile(
       std::istreambuf_iterator<char>(input)),
       (std::istreambuf_iterator<char>()));
 
-  // Compile GLSL into SPIR-V
-  const shaderc_compilation_result_t comp_results =
-    shaderc_compile_into_spv(
-        compiler,
-        buffer.data(),
-        SCAST_U32(buffer.size()),
-        GetShadercShaderKind(),
-        file_name_.c_str(),
-        entry_point_.c_str(),
-        shaderc_compile_options_t());
+  VkShaderModuleCreateInfo module_create_info = 
+    tools::inits::ShaderModuleCreateInfo();
+  if (is_spv_) {
+    module_create_info.pCode = reinterpret_cast<uint32_t *>(buffer.data());
+    module_create_info.codeSize = SCAST_U32(buffer.size());
+  }
+  else {
+    // Compile GLSL into SPIR-V
+    const shaderc_compilation_result_t comp_results =
+      shaderc_compile_into_spv(
+          compiler,
+          buffer.data(),
+          SCAST_U32(buffer.size()),
+          GetShadercShaderKind(),
+          file_name_.c_str(),
+          entry_point_.c_str(),
+          shaderc_compile_options_t());
 
-  shaderc_compilation_status comp_status =
-    shaderc_result_get_compilation_status(comp_results);
+    shaderc_compilation_status comp_status =
+      shaderc_result_get_compilation_status(comp_results);
 
-  if (comp_status != shaderc_compilation_status_success) {
-    eastl::string comp_err_msg = shaderc_result_get_error_message(comp_results);
-    if (compiled_once_) {
-      // Don't change shaders but report it
-      ELOG_ERR("Reload of shader " << file_name_ << " failed:\n" <<
-               comp_err_msg << "\n" << "Using initial shaders.");
+    if (comp_status != shaderc_compilation_status_success) {
+      eastl::string comp_err_msg = shaderc_result_get_error_message(comp_results);
+      if (compiled_once_) {
+        // Don't change shaders but report it
+        ELOG_ERR("Reload of shader " << file_name_ << " failed:\n" <<
+                 comp_err_msg << "\n" << "Using initial shaders.");
 
-      return current_stage_create_info_;
+        return current_stage_create_info_;
+      }
+      else {
+        EXIT("Couldn't compile shader " << file_name_ << ":\n" <<
+             comp_err_msg);
+      }
     }
-    else {
-      EXIT("Couldn't compile shader " << file_name_ << ":\n" <<
-           comp_err_msg);
-    }
+  
+    module_create_info.codeSize = SCAST_U32(shaderc_result_get_length(
+                                            comp_results));
+    module_create_info.pCode =
+      reinterpret_cast<const uint32_t *>(shaderc_result_get_bytes(comp_results));
   }
 
-
-  VkShaderModuleCreateInfo module_create_info =
-    tools::inits::ShaderModuleCreateInfo();
-  module_create_info.codeSize = SCAST_U32(shaderc_result_get_length(
-                                            comp_results));
-  module_create_info.pCode =
-    reinterpret_cast<const uint32_t *>(shaderc_result_get_bytes(comp_results));
 
   VkShaderModule module = VK_NULL_HANDLE;
   VK_CHECK_RESULT(vkCreateShaderModule(
