@@ -218,7 +218,7 @@ void ModelManager::LoadOtherModel(
         SCAST_U32(model_builder.indices_data().size()),
         ai_mesh->mNumFaces * 3U,
         0U,
-        ai_mesh->mMaterialIndex - 1);
+        ai_mesh->mMaterialIndex);
   
     LOG("MATIDX: " << ai_mesh->mMaterialIndex);
     // Load the vertices for this mesh 
